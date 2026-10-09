@@ -8,84 +8,68 @@ from pathlib import Path #
 def main():
     '''
     The main function.
-    Starts the GUI and connects it to the backend
+    Starts the GUI and connects it to the backend.
     '''
     h = Herd() #
     f = Farm() #
     hpgui = HPGT(h,f) # 
 
 # Opjects
-class Cattle: 
-    '''
-    Object definition for cattle as individum of an herd
-    '''
-    def __init__(self,name,lom,born,gender):
-        self.name = name #
-        self.lom = lom #
-        self.gender = gender #
-        self.born = born #
-        self.compartment = None #
-
-class Comparmtent:
-    '''
-    Object definition for compartment as part of an farm
-    '''
-    def __init__(self,name,count,age_min,age_max,gender):
-        self.name = name #
-        self.count = count #
-        self.gender = gender #
-        self.age_min = age_min #
-        self.age_max = age_max #
-
 class Herd:
     '''
-    Object definition for a herd
+    Object definition for a herd.
+    A herd 
     '''
-    def __init__(self):
-        self.cols = {'NAME','LOM_X','LOM_A','GEB_DATR','GESCHL_R','RASSE','LOM_MUTX','DAT_EIN','TIER_EINX','BNR15_VBX','BNR15_NBX','LAND_URX','GVE','LKALBDAT','KALBUNGANZ','ZKZ_DURCHT','COMPARTMENT'}
-        self.df = None
-        self.ind_list = []
+    def __init__(self): 
+        self.cols =['NAME','LOM_X','LOM_A','GEB_DATR','GESCHL_R','RASSE','LOM_MUTX','DAT_EIN','TIER_EINX','BNR15_VBX','BNR15_NBX','LAND_URX','GVE','LKALBDAT','KALBUNGANZ','ZKZ_DURCHT','COMPARTMENT']
+        self.herd_df = pd.DataFrame(columns=self.cols)
+        print(f'\033[36mHerd: \n{self.herd_df} \033[0m')
 
-    def add_ind(self,name,lom,born,gender):
-        if self.df is None: self.df = pd.DataFrame(columns=self.cols)
-        # append to df......
-        self.ind_list.append(Cattle(name,lom,born,gender))
-
+    def add_ind(self,name,lom,born,gender): 
+        """
+        Function that is called when a ind is added manual by user
+        """
+        self.herd_df.loc[len(self.herd_df)] = [name,lom,'',born,gender,'','','','','','','','','','','','']
+        print(f'\033[36mHerd: \n{self.herd_df} \033[0m')
+    
     def import_csv(self,csv_path):
-        self.csv_path = Path(csv_path) # 
-        self.df = pd.read_csv(self.csv_path, sep=';') # read csv file 
-        self.df = self.df.fillna('') # Leere Felder mit leerem String füllen
-        if 'NAME' not in self.df.columns: self.df.insert(loc = 0, column = 'NAME', value = '')
-        if 'COMPARTMENT' not in self.df.columns: self.df['COMPARTMENT'] = ''
+        """
+        Function that is called when a ind is added by csv import
+        """
+        self.csv_path = Path(csv_path) # Ensure that the path is a path object
+        import_df = pd.read_csv(self.csv_path, sep=';') # read csv file 
+        import_df = import_df.fillna('') # Leere Felder mit leerem String füllen
+        if 'NAME' not in import_df.columns: 
+            import_df.insert(loc = 0, column = 'NAME', value = '') # Add Name col
+            self.herd_df.loc[self.herd_df["NAME"].eq(""), "NAME"] = self.herd_df.loc[self.herd_df["NAME"].eq(""), "LOM_X"] # copy Lom col in name col
         
-        for col in self.df:
-            if col not in self.cols: del self.df[col]
-
-        self.df.loc[self.df["NAME"].eq(""), "NAME"] = self.df.loc[self.df["NAME"].eq(""), "LOM_X"]
-
-        print(self.df) 
-
-        for row in self.df.itertuples(index=False):
-            self.add_ind(row.NAME,row.LOM_X,row.GEB_DATR,row.GESCHL_R)
-
+        if 'COMPARTMENT' not in import_df.columns: import_df['COMPARTMENT'] = '' # Add name col
         
-        print(f'\033[36mDatenbank {self.csv_path} geöffnet und geladen.\033[0m')
-        self.save_csv()
+        for col in import_df:
+            if col not in self.cols: del import_df[col] # del not needed / wanted cols
+
+        print("Import-Data: \n", import_df) 
+
+        self.herd_df = (pd.concat([self.herd_df, import_df], ignore_index=True).drop_duplicates())
+
+        print(f'\033[32mDatenbank {self.csv_path} geöffnet und importiert.\033[0m')
+        print(f'\033[36mHerd: \n{self.herd_df} \033[0m')
         
     def save_csv(self):
-        self.df.to_csv(self.csv_path,sep=';',index=False)
+        self.herd_df.to_csv(self.csv_path,sep=';',index=False)
         print(f'\033[32mDataFrame erfolgreich in {self.csv_path} gespeichert\033[0m')
-
 
 class Farm:
     '''
     Object definition for a farm
     '''
     def __init__(self):
-        self.comp_list = []
+        self.farm_df = pd.DataFrame(columns=['NAME','COUNT','AGE_Min','AGE_MAX','GENDER'])
+        print(f'\033[33mFarm: \n{self.farm_df} \033[0m')
 
     def add_comp(self,name,count,age_min,age_max,gender):
-        self.comp_list.append(Comparmtent(name,count,age_min,age_max,gender))
+        self.farm_df.loc[len(self.farm_df)] = [name,count,age_min,age_max,gender]
+        print(f'\033[33mFarm: \n{self.farm_df} \033[0m')
 
 class HPGT(): # Herd Planner GUI Tools
     '''
@@ -100,7 +84,7 @@ class HPGT(): # Herd Planner GUI Tools
 
         self.window = tk.Tk()
         self.window.title('Herd Planner')
-        self.window.geometry('678x345') # Width x Height
+        self.window.geometry('678x456') # Width x Height
         self.window.protocol("WM_DELETE_WINDOW", self.on_close)
 
         self.menu = tk.Menu(self.window)
@@ -114,7 +98,7 @@ class HPGT(): # Herd Planner GUI Tools
         self.menu.add_cascade(label='Help', menu=helpmenu)
         helpmenu.add_command(label='About')
 
-        self.assignments = {}
+        self.assignments = dict()
         self.herd_window = None
         self.farm_window = None
 
@@ -125,9 +109,10 @@ class HPGT(): # Herd Planner GUI Tools
         ttk.Button(self.window, text='Entfernen', command=self.rm_from_herd).grid(row=0,column=5)
 
         ttk.Label(self.window, text='Abteile:', font=('',12,'bold')).grid(row=2,column=0,columnspan=2, sticky='w', pady=25)
-        ttk.Button(self.window, text='Hinzufügen', command=self.add2farm).grid(row=2,column=2)
-        ttk.Button(self.window, text='Aktualisieren', command=self.update_compartment).grid(row=2,column=3)
-        ttk.Button(self.window, text='Entfernen', command=self.rm_compartment).grid(row=2,column=4)
+        ttk.Button(self.window, text='Vorschlag', command=self.suggest).grid(row=2,column=2)
+        ttk.Button(self.window, text='Hinzufügen', command=self.add2farm).grid(row=2,column=3)
+        ttk.Button(self.window, text='Aktualisieren', command=self.update_compartment).grid(row=2,column=4)
+        ttk.Button(self.window, text='Entfernen', command=self.rm_compartment).grid(row=2,column=5)
 
         self.refresh_assignments()
 
@@ -140,16 +125,16 @@ class HPGT(): # Herd Planner GUI Tools
             grid_info = widget.grid_info()
             if grid_info and int(grid_info["row"]) not in {0,2}: widget.destroy()
     
-        self.unassigned_box = tk.Listbox(self.window, width=100, height=5, exportselection=False, selectmode='multiple')
-        self.unassigned_box.grid(row=1,column=0,columnspan=6)
-        for n, comp in enumerate(self.farm.comp_list):
-            ttk.Button(self.window, text=comp.name, command=lambda comp_name=comp.name: self.re_assign(comp_name)).grid(row=3,column=n) #funktioinert nicht weil comp.name sich änder im loop. alle button dann für letzte
-            self.assignments[comp.name] = tk.Listbox(self.window, width=15, height=15, exportselection=False, selectmode='multiple')
-            self.assignments[comp.name].grid(row=4,column=n)
+        self.unassigned_box = tk.Listbox(self.window, width=15, height=15, exportselection=False, selectmode='multiple')
+        self.unassigned_box.grid(row=4,column=0)
+        for comp in self.farm.farm_df.itertuples(index=True):
+            ttk.Button(self.window, text=comp.NAME, command=lambda comp_name=comp.NAME: self.re_assign(comp_name)).grid(row=3,column=comp.Index+1)
+            self.assignments[comp.NAME] = tk.Listbox(self.window, width=15, height=15, exportselection=False, selectmode='multiple')
+            self.assignments[comp.NAME].grid(row=4,column=comp.Index+1)
 
-        for ind in self.herd.ind_list:
-            if ind.compartment is None: self.unassigned_box.insert(0,ind.name)
-            else: self.assignments[ind.compartment].insert(0,ind.name)
+        for ind in self.herd.herd_df.itertuples(index=True):
+            if ind.COMPARTMENT == '' : self.unassigned_box.insert(0,ind.NAME)
+            else: self.assignments[ind.COMPARTMENT].insert(0,ind.NAME)
 
     def re_assign(self,comp):
         re_assign_list = []
@@ -162,10 +147,10 @@ class HPGT(): # Herd Planner GUI Tools
                 re_assign_list.append(value.get(i))
 
         for ind_name in re_assign_list:
-            for ind in self.herd.ind_list:
-                if ind.name == ind_name: 
-                    if ind.compartment == comp: ind.compartment = None
-                    else: ind.compartment = comp
+            for ind in self.herd.herd_df.itertuples(index=True):
+                if ind.NAME == ind_name: 
+                    if ind.COMPARTMENT == comp: self.herd.herd_df.at[ind.Index, "COMPARTMENT"] = ''
+                    else: self.herd.herd_df.at[ind.Index, "COMPARTMENT"] = comp
              
         self.refresh_assignments()
         
@@ -225,6 +210,9 @@ class HPGT(): # Herd Planner GUI Tools
         self.farm_frame = ttk.Frame(self.farm_window)
         self.farm_frame.pack(fill="both", expand=True)
 
+    def suggest(self):
+        pass
+
     def add2farm(self):
         self.load_farm_window()
         self.farm_window.title('Add Compartment to Farm')
@@ -266,9 +254,6 @@ class HPGT(): # Herd Planner GUI Tools
 
     def on_close(self):
         self.window.destroy()
-
-
-
 
 
 # Global
