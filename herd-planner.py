@@ -1,4 +1,5 @@
 # Imports
+import random
 import pandas as pd # 
 import tkinter as tk #
 from tkinter import ttk, filedialog, simpledialog, messagebox #
@@ -25,16 +26,22 @@ class Herd:
         self.df = pd.DataFrame(columns=self.cols)
         print(f'\033[36mHerd: \n{self.df} \033[0m')
 
-    def add_ind(self,name,lom,born,gender): 
+    def add_ind(self,value_list): 
         """
         Function that is called when a ind is added manual by user
         """
-        self.df.loc[len(self.df)] = [name,lom,'',born,gender,'','','','','','','','','','','','']
+        self.df.loc[len(self.df)] = value_list
+        print(f'\033[32mIndividual {value_list} added to herd.\033[0m')
+        print(f'\033[36mHerd: \n{self.df} \033[0m')
+
+    def del_ind(self,name):
+        self.df = self.df[self.df['NAME'] != name].reset_index(drop=True)
+        print(f'\033[32mIndividual {name} removed from herd.\033[0m')
         print(f'\033[36mHerd: \n{self.df} \033[0m')
     
     def import_csv(self,import_csv_path):
         """
-        Function that is called when a ind is added by csv import
+        Function that is called when inds is added by csv import
         """
         import_csv_path = Path(import_csv_path) # Ensure that the path is a path object
         import_df = pd.read_csv(import_csv_path, sep=';') # read csv file 
@@ -52,12 +59,12 @@ class Herd:
 
         self.df = (pd.concat([self.df, import_df], ignore_index=True).drop_duplicates(subset='LOM_X')) # LOM_X is the identifyer. all comus would leed to problems e.g. Compartment...
 
-        print(f'\033[32mDatenbank {import_csv_path} geöffnet und importiert.\033[0m')
+        print(f'\033[32mDatabase {import_csv_path} opend and imported.\033[0m')
         print(f'\033[36mHerd: \n{self.df} \033[0m')
 
     def export_csv(self, export_csv_path):
         self.df.to_csv(export_csv_path,sep=';',index=False)
-        print(f'\033[32mDataFrame erfolgreich in {export_csv_path} gespeichert\033[0m')
+        print(f'\033[32mDataFrame successfully saved in {export_csv_path}.\033[0m')
 
 class Farm:
     '''
@@ -68,17 +75,40 @@ class Farm:
         self.df = pd.DataFrame(columns= self.cols)
         print(f'\033[33mFarm: \n{self.df} \033[0m')
 
-    def add_comp(self,name,count,age_min,age_max,gender):
-        self.df.loc[len(self.df)] = [name,count,age_min,age_max,gender]
+    def add_comp(self,value_list):
+        self.df.loc[len(self.df)] = value_list
+        print(f'\033[32mCompartment {value_list} added to farm.\033[0m')
         print(f'\033[33mFarm: \n{self.df} \033[0m')
 
-    def import_csv(self):
-        pass
+    def del_comp(self,name):
+        self.df = self.df[self.df['NAME'] != name].reset_index(drop=True)
+        print(f'\033[32mCompartment {name} removed from farm.\033[0m')
+        print(f'\033[36mFarm: \n{self.df} \033[0m')
+
+    def import_csv(self,import_csv_path):
+        """
+        Function that is called when comps are added by csv import
+        """
+        import_csv_path = Path(import_csv_path) # Ensure that the path is a path object
+        import_df = pd.read_csv(import_csv_path, sep=';') # read csv file 
+        import_df = import_df.fillna('') # Leere Felder mit leerem String füllen
+        if 'NAME' not in import_df.columns: 
+            import_df.insert(loc = 0, column = 'NAME', value = '') # Add Name col
+            self.df.loc[self.df["NAME"].eq(""), "NAME"] = ''.join(random.choices('ABCDEFGHIJKLMNOPQRSTUVWXYZ', k=12)) # set random name
+        
+        for col in import_df:
+            if col not in self.cols: del import_df[col] # del not needed / wanted cols
+
+        print("Import-Data: \n", import_df) 
+
+        self.df = (pd.concat([self.df, import_df], ignore_index=True).drop_duplicates(subset='NAME')) # LOM_X is the identifyer. all comus would leed to problems e.g. Compartment...
+
+        print(f'\033[32mDatabase {import_csv_path} opend and imported.\033[0m')
+        print(f'\033[36mFarm: \n{self.df} \033[0m')
 
     def export_csv(self, export_csv_path):
         self.df.to_csv(export_csv_path,sep=';',index=False)
         print(f'\033[32mDataFrame erfolgreich in {export_csv_path} gespeichert\033[0m')
-
 
 class HPGT(): # Herd Planner GUI Tools
     '''
@@ -112,21 +142,21 @@ class HPGT(): # Herd Planner GUI Tools
         self.herd_window = None
         self.farm_window = None
 
+        # Farm
         ttk.Label(self.window, text='Manage Farm:', font=('',12,'bold')).grid(row=0,column=0, sticky='w', pady=25)
         ttk.Button(self.window, text='Import', command=self.import_farm).grid(row=0,column=1)
         ttk.Button(self.window, text='Hinzufügen', command=self.add2farm).grid(row=0,column=2)
-        ttk.Button(self.window, text='Aktualisieren', command=self.update_compartment).grid(row=0,column=3)
-        ttk.Button(self.window, text='Entfernen', command=self.rm_compartment).grid(row=0,column=4)
+        ttk.Button(self.window, text='Aktualisieren', command=self.update_farm).grid(row=0,column=3)
+        ttk.Button(self.window, text='Entfernen', command=self.rm_from_farm).grid(row=0,column=4)
         ttk.Button(self.window, text='Export', command=self.export_farm).grid(row=0,column=5)
-
+        
+        # Herd
         ttk.Label(self.window, text='Manage Herd:', font=('',12,'bold')).grid(row=2,column=0, sticky='w', pady=25)
         ttk.Button(self.window, text='Import', command=self.import_herd).grid(row=2,column=1)
         ttk.Button(self.window, text='Hinzufügen', command=self.add2herd).grid(row=2,column=2)
-        ttk.Button(self.window, text='Aktualisieren', command=self.update_ind).grid(row=2,column=3)
+        ttk.Button(self.window, text='Aktualisieren', command=self.update_herd).grid(row=2,column=3)
         ttk.Button(self.window, text='Entfernen', command=self.rm_from_herd).grid(row=2,column=4)
         ttk.Button(self.window, text='Export', command=self.export_herd).grid(row=2,column=5)
-
-
 
         self.refresh_assignments()
 
@@ -191,35 +221,67 @@ class HPGT(): # Herd Planner GUI Tools
         self.load_herd_window()
         self.herd_window.title('Add Individuum to Herd')
         ttk.Label(self.herd_frame, text='Tier zu Herde hinzufügen:', font=('',12,'bold')).grid(row=0,column=0,columnspan=2, sticky='w', pady=25)
-        ttk.Label(self.herd_frame, text='Name:').grid(row=0,column=2)
-        self.ind_name_add = ttk.Entry(self.herd_frame, width=15, justify='center')
-        self.ind_name_add.grid(row=0,column=3)
-        ttk.Label(self.herd_frame, text='LOM:').grid(row=0,column=4)
-        self.ind_lom_add = ttk.Entry(self.herd_frame, width=20, justify='center')
-        self.ind_lom_add.grid(row=0,column=5)
-        ttk.Label(self.herd_frame, text='Geb:').grid(row=1,column=0)
-        self.ind_born_add = ttk.Entry(self.herd_frame, width=10, justify='center')
-        self.ind_born_add.grid(row=1,column=1)
-        ttk.Label(self.herd_frame, text='Gender:').grid(row=1,column=2)
-        self.ind_gender_add = ttk.Combobox(self.herd_frame, width=10, values=['M','W'], justify='center')
-        self.ind_gender_add.grid(row=1,column=3)      
-        ttk.Button(self.herd_frame, text='Hinzufügen', command=self.add_ind).grid(row=1,column=4)
 
-    def update_ind(self):
+        for i, col in enumerate(self.herd.cols):
+            n_c = 6 # number of cols
+            r = i // n_c + 1
+            c = (i - i // n_c * n_c) * 2
+            ttk.Label(self.herd_frame, text=col).grid(row=r,column=c)
+            setattr(self,col,ttk.Entry(self.herd_frame, width=15, justify='center'))
+            entry_field = getattr(self, col)
+            entry_field.grid(row=r,column=c+1)
+   
+        ttk.Button(self.herd_frame, text='Hinzufügen', command=self.add_ind).grid(row=r+1,column=n_c*2-1)
+
+    def update_herd(self):
         self.load_herd_window()
-        self.herd_window.title('Update Individuum to Herd')
-        ttk.Label(self.herd_frame, text='Tier in Herde aktualisieren:', font=('',12,'bold')).grid(row=0,column=0,columnspan=1, sticky='w', pady=25)
+        self.herd_window.title('Update Individuum of Herd')
+        ttk.Label(self.herd_frame, text='Tier in Herde aktualisieren:', font=('',12,'bold')).grid(row=0,column=0,columnspan=2, sticky='w', pady=25)
+        self.cbox_get_ind = ttk.Combobox(self.herd_frame, width=20, values=sorted(self.herd.df['NAME'].unique()))
+        self.cbox_get_ind.grid(row=0,column=2)
+        ttk.Button(self.herd_frame, text='Holen', command=self.get_ind).grid(row=0,column=3)
+
+    def get_ind(self):
+        ind = self.herd.df[self.herd.df['NAME']==self.cbox_get_ind.get()].iloc[0].to_dict()
+        for i, (key, value) in enumerate(ind.items()):
+            n_c = 6 # number of cols
+            r = i // n_c + 1
+            c = (i - i // n_c * n_c) * 2
+            ttk.Label(self.herd_frame, text=key).grid(row=r,column=c)
+            setattr(self,key,ttk.Entry(self.herd_frame, width=15, justify='center'))
+            entry_field = getattr(self, key)
+            entry_field.grid(row=r,column=c+1)
+            entry_field.insert(0,value)
+
+        ttk.Button(self.herd_frame, text='Aktualisieren', command=self.del_add_ind).grid(row=r+1,column=n_c*2-1)
 
     def rm_from_herd(self):
         self.load_herd_window()
-        self.herd_window.title('Remove Individuum to Herd')
+        self.herd_window.title('Remove Individuum from Herd')
         ttk.Label(self.herd_frame, text='Tier aus Herde entfernen:', font=('',12,'bold')).grid(row=0,column=0,columnspan=1, sticky='w', pady=25)
+        self.cbox_get_ind = ttk.Combobox(self.herd_frame, width=20, values=sorted(self.herd.df['NAME'].unique()))
+        self.cbox_get_ind.grid(row=0,column=2)
+        ttk.Button(self.herd_frame, text='Entfernen', command=self.del_ind).grid(row=0,column=3)
 
     def add_ind(self):
-        self.herd.add_ind(self.ind_name_add.get(),self.ind_lom_add.get(),self.ind_born_add.get(),self.ind_gender_add.get())
+        vlaue_list = list()
+        for col in self.herd.cols:
+            entry_field = getattr(self, col)
+            vlaue_list.append(entry_field.get())
+
+        self.herd.add_ind(vlaue_list)
         self.herd_window.destroy()
         self.refresh_assignments()
 
+    def del_add_ind(self):
+        self.herd.del_ind(self.cbox_get_ind.get()) # direct via self.del_ind not possible because it closes the windows bevor add is executed
+        self.add_ind()
+
+    def del_ind(self):
+        self.herd.del_ind(self.cbox_get_ind.get())
+        self.herd_window.destroy()
+        self.refresh_assignments()
+        
 ######################################################################################################################################################
 
     def import_farm(self):
@@ -236,7 +298,6 @@ class HPGT(): # Herd Planner GUI Tools
     def load_farm_window(self):
         if self.farm_window is not None and self.farm_window.winfo_exists(): return # no double windows
         self.farm_window = tk.Toplevel()
-        self.farm_window.title('Add Compartment to Farm')
         self.farm_frame = ttk.Frame(self.farm_window)
         self.farm_frame.pack(fill="both", expand=True)
 
@@ -248,38 +309,70 @@ class HPGT(): # Herd Planner GUI Tools
 
     def add2farm(self):
         self.load_farm_window()
-        self.farm_window.title('Add Compartment to Farm')
-        ttk.Label(self.farm_frame, text='Abteil hinzufügen:', font=('',12,'bold')).grid(row=0,column=0,columnspan=1, sticky='w', pady=25)
-        ttk.Label(self.farm_frame, text='Name:').grid(row=0,column=2)
-        self.comp_name_add = ttk.Entry(self.farm_frame, width=15, justify='center')
-        self.comp_name_add.grid(row=0,column=3)
-        ttk.Label(self.farm_frame, text='Anzahl (max):').grid(row=0,column=4)
-        self.comp_count_add = ttk.Entry(self.farm_frame, width=20, justify='center')
-        self.comp_count_add.grid(row=0,column=5)
-        ttk.Label(self.farm_frame, text='Alter (min)').grid(row=1,column=0)
-        self.comp_agemin_add = ttk.Entry(self.farm_frame, width=10, justify='center')
-        self.comp_agemin_add.grid(row=1,column=1)
-        ttk.Label(self.farm_frame, text='Alter (max)').grid(row=1,column=2)
-        self.comp_agemax_add = ttk.Entry(self.farm_frame, width=10, justify='center')
-        self.comp_agemax_add.grid(row=1,column=3)
-        ttk.Label(self.farm_frame, text='Gender:').grid(row=1,column=4)
-        self.comp_gender_add = ttk.Combobox(self.farm_frame, width=10, values=['X','M','W'], justify='center')
-        self.comp_gender_add.grid(row=1,column=5)      
-        self.comp_gender_add.set('X')
-        ttk.Button(self.farm_frame, text='Hinzufügen', command=self.add_comp).grid(row=2,column=5)
+        self.farm_window.title('Add Compartment to farm')
+        ttk.Label(self.farm_frame, text='Abbteil zu Farm hinzufügen:', font=('',12,'bold')).grid(row=0,column=0,columnspan=2, sticky='w', pady=25)
 
-    def update_compartment(self):
-        self.load_farm_window()
-        self.farm_window.title('Update Compartment to Farm')
-        ttk.Label(self.farm_frame, text='Abteil aktualisieren:', font=('',12,'bold')).grid(row=0,column=0,columnspan=1, sticky='w', pady=25)
+        for i, col in enumerate(self.farm.cols):
+            n_c = 6 # number of cols
+            r = i // n_c + 1
+            c = (i - i // n_c * n_c) * 2
+            ttk.Label(self.farm_frame, text=col).grid(row=r,column=c)
+            setattr(self,col,ttk.Entry(self.farm_frame, width=15, justify='center'))
+            entry_field = getattr(self, col)
+            entry_field.grid(row=r,column=c+1)
+   
+        ttk.Button(self.farm_frame, text='Hinzufügen', command=self.add_comp).grid(row=r+1,column=n_c*2-1)
 
-    def rm_compartment(self):
+    def update_farm(self):
         self.load_farm_window()
-        self.farm_window.title('Remove Compartment to Farm')
-        ttk.Label(self.farm_frame, text='Abteil entfernen:', font=('',12,'bold')).grid(row=0,column=0,columnspan=1, sticky='w', pady=25)
+        self.farm_window.title('Update Compartment of farm')
+        ttk.Label(self.farm_frame, text='Abteil der Farm aktualisieren:', font=('',12,'bold')).grid(row=0,column=0,columnspan=2, sticky='w', pady=25)
+        self.cbox_get_comp = ttk.Combobox(self.farm_frame, width=20, values=sorted(self.farm.df['NAME'].unique()))
+        self.cbox_get_comp.grid(row=0,column=2)
+        ttk.Button(self.farm_frame, text='Holen', command=self.get_comp).grid(row=0,column=3)
+
+    def get_comp(self):
+        comp = self.farm.df[self.farm.df['NAME']==self.cbox_get_comp.get()].iloc[0].to_dict()
+        for i, (key, value) in enumerate(comp.items()):
+            n_c = 6 # number of cols
+            r = i // n_c + 1
+            c = (i - i // n_c * n_c) * 2
+            ttk.Label(self.farm_frame, text=key).grid(row=r,column=c)
+            setattr(self,key,ttk.Entry(self.farm_frame, width=15, justify='center'))
+            entry_field = getattr(self, key)
+            entry_field.grid(row=r,column=c+1)
+            entry_field.insert(0,value)
+
+        ttk.Button(self.farm_frame, text='Aktualisieren', command=self.del_add_comp).grid(row=r+1,column=n_c*2-1)
+
+    def rm_from_farm(self):
+        self.load_farm_window()
+        self.farm_window.title('Remove Compartment from farm')
+        ttk.Label(self.farm_frame, text='Abteil aus Farm entfernen:', font=('',12,'bold')).grid(row=0,column=0,columnspan=1, sticky='w', pady=25)
+        self.cbox_get_comp = ttk.Combobox(self.farm_frame, width=20, values=sorted(self.farm.df['NAME'].unique()))
+        self.cbox_get_comp.grid(row=0,column=2)
+        ttk.Button(self.farm_frame, text='Entfernen', command=self.del_comp).grid(row=0,column=3)
 
     def add_comp(self):
-        self.farm.add_comp(self.comp_name_add.get(),self.comp_count_add.get(),self.comp_agemin_add.get(),self.comp_agemax_add.get(),self.comp_gender_add.get())
+        vlaue_list = list()
+        for col in self.farm.cols:
+            entry_field = getattr(self, col)
+            vlaue_list.append(entry_field.get())
+
+        self.farm.add_comp(vlaue_list)
+        self.farm_window.destroy()
+        self.refresh_assignments()
+
+    def del_add_comp(self):
+        comp_name = self.cbox_get_comp.get()
+        self.farm.del_comp(comp_name)
+        del self.assignments[comp_name] # direct via self.del_comp not possible because it closes the windows bevor add is executed
+        self.add_comp() # here no self.assignments management neccesary, because addition wors automatic within refresh function
+
+    def del_comp(self):
+        comp_name = self.cbox_get_comp.get()
+        self.farm.del_comp(comp_name)
+        del self.assignments[comp_name]
         self.farm_window.destroy()
         self.refresh_assignments()
 
@@ -287,7 +380,6 @@ class HPGT(): # Herd Planner GUI Tools
 
     def on_close(self):
         self.window.destroy()
-
 
 # Global
 if __name__ == '__main__': # 
