@@ -57,7 +57,7 @@ class Herd:
 
         print("Import-Data: \n", import_df) 
 
-        self.df = (pd.concat([self.df, import_df], ignore_index=True).drop_duplicates(subset='LOM_X')) # LOM_X is the identifyer. all comus would leed to problems e.g. Compartment...
+        self.df = (pd.concat([self.df, import_df], ignore_index=True).drop_duplicates(subset='NAME')) # NAME is the identifyer. all comus would leed to problems e.g. Compartment...
 
         print(f'\033[32mDatabase {import_csv_path} opend and imported.\033[0m')
         print(f'\033[36mHerd: \n{self.df} \033[0m')
@@ -101,7 +101,7 @@ class Farm:
 
         print("Import-Data: \n", import_df) 
 
-        self.df = (pd.concat([self.df, import_df], ignore_index=True).drop_duplicates(subset='NAME')) # LOM_X is the identifyer. all comus would leed to problems e.g. Compartment...
+        self.df = (pd.concat([self.df, import_df], ignore_index=True).drop_duplicates(subset='NAME')) # BNAME is the identifyer. all comus would leed to problems e.g. Compartment...
 
         print(f'\033[32mDatabase {import_csv_path} opend and imported.\033[0m')
         print(f'\033[36mFarm: \n{self.df} \033[0m')
